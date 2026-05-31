@@ -1,0 +1,38 @@
+# Read-only Atlassian MCP server (sooperset/mcp-atlassian) for VNPay self-hosted
+# Jira & Confluence (Data Center). LOCAL USE ONLY — stdio transport.
+#
+# This is NOT a long-running service. Claude Code launches the container on
+# demand (one per session) and talks to it over stdin/stdout. There is no port
+# and no network listener — nothing is exposed.
+#
+# Read-only is enforced in TWO layers via .env:
+#   1. READ_ONLY_MODE=true   -> disables every write operation
+#   2. ENABLED_TOOLS=<reads> -> allowlist; only read tools are even loaded
+#
+# Run/register (see CLAUDE.md):
+#   claude mcp add vnpay-atlassian -- \
+#     docker compose -f /Users/huy/Documents/proj/linhmi/docker-compose.yml run --rm -T atlassian-mcp
+#
+services:
+  atlassian-mcp:
+    # Pin to a specific release for supply-chain safety instead of floating :latest.
+    # See https://github.com/sooperset/mcp-atlassian/releases and set MCP_ATLASSIAN_TAG in .env.
+    image: ghcr.io/sooperset/mcp-atlassian:${MCP_ATLASSIAN_TAG:-latest}
+
+    # Credentials + read-only config all come from .env (never hard-code secrets here).
+    env_file:
+      - .env
+
+    # No `command:` -> the image defaults to stdio transport. No ports, no
+    # restart policy: the process lives only for the duration of an MCP session.
+    stdin_open: true   # keep STDIN open so the JSON-RPC stream works
+    tty: false         # MCP stdio is not a terminal
+
+    # Hardening: drop privileges; downloads (if used) go to a writable tmpfs.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp

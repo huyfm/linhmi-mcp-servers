@@ -1,0 +1,16 @@
+# Secrets — never commit real credentials
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Custom
+reports/
+tmp.txt

@@ -1,0 +1,21 @@
+[project]
+name = "vnpay-mcp-tests"
+version = "0.1.0"
+description = "Read-only pytest suite for the VNPay Atlassian MCP deployment"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+# Not an installable package — just config + tests managed by uv.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "-ra -v"
+pythonpath = ["src"]
+testpaths = ["src/tests"]
+markers = [
+  "integration: hits the live MCP server over stdio (needs Docker + a real .env)",
+]
