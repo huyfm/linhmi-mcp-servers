@@ -1,0 +1,3 @@
+# Pin exactly for supply-chain safety (mirrors the image-tag pinning ethos).
+# GitHubProvider + FastMCP.as_proxy/ProxyClient require FastMCP >= 2.12.
+fastmcp==2.12.2

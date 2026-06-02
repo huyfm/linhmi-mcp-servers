@@ -1,25 +1,24 @@
 """Shared pytest fixtures for the read-only MCP integration tests.
 
-These tests drive the REAL Atlassian MCP server over stdio (the same
-`docker compose run --rm -T atlassian-mcp` Claude Code uses), so they require:
-  * Docker daemon running
-  * a real `.env` with valid URLs + Personal Access Tokens
+These tests drive the REAL Atlassian MCP server over **streamable-http** (the
+same remote endpoint Claude Code / Claude Desktop use, i.e. the auth-proxy in
+front of mcp-atlassian), so they require:
+  * MCP_BASE_URL pointing at the running endpoint, e.g.
+      http://localhost:8000/mcp   (local `docker compose up`, AUTH_DISABLED=true)
+      https://<fqdn>/mcp          (Azure; also set MCP_BEARER_TOKEN)
+  * MCP_BEARER_TOKEN when the endpoint enforces GitHub OAuth
 
-If those prerequisites are missing, the whole suite is skipped (not failed) so
-it stays portable. Every fixture is read-only.
+If MCP_BASE_URL is unset or the endpoint is unreachable, the whole suite is
+skipped (not failed) so it stays portable. Every fixture is read-only.
 """
 
 from __future__ import annotations
 
-import shutil
-import subprocess
-from pathlib import Path
+import os
 
 import pytest
 
 from mcp_client import MCPClient, MCPError
-
-ENV_FILE = Path(__file__).parent.parent / ".env"
 
 
 def pytest_addoption(parser):
@@ -29,32 +28,17 @@ def pytest_addoption(parser):
                      help="Confluence page id to test (default: auto-discover)")
 
 
-def _docker_ready() -> bool:
-    if shutil.which("docker") is None:
-        return False
-    try:
-        return subprocess.run(["docker", "info"], capture_output=True,
-                              timeout=15).returncode == 0
-    except Exception:
-        return False
-
-
 @pytest.fixture(scope="session")
 def mcp():
-    """A connected, initialized read-only MCP client (one container per session)."""
-    if not _docker_ready():
-        pytest.skip("Docker daemon not available")
-    if not ENV_FILE.exists():
-        pytest.skip(".env not found — copy .env.example and fill in real values")
-    if "replace-with-your" in ENV_FILE.read_text():
-        pytest.skip(".env still contains placeholder token(s)")
+    """A connected, initialized read-only MCP client (streamable-http)."""
+    if not os.environ.get("MCP_BASE_URL"):
+        pytest.skip("MCP_BASE_URL not set — point it at the running /mcp endpoint")
 
-    client = MCPClient()
     try:
+        client = MCPClient()
         client.initialize()
     except MCPError as exc:
-        client.close()
-        pytest.skip(f"MCP server did not start: {exc}")
+        pytest.skip(f"MCP endpoint not reachable / did not initialize: {exc}")
     yield client
     client.close()
 

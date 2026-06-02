@@ -14,8 +14,8 @@ package = false
 
 [tool.pytest.ini_options]
 addopts = "-ra -v"
-pythonpath = ["src"]
-testpaths = ["src/tests"]
+pythonpath = ["tests"]
+testpaths = ["tests"]
 markers = [
-  "integration: hits the live MCP server over stdio (needs Docker + a real .env)",
+  "integration: hits the live MCP server over streamable-http (needs MCP_BASE_URL, optionally MCP_BEARER_TOKEN)",
 ]

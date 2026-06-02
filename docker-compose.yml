@@ -1,34 +1,67 @@
-# Read-only Atlassian MCP server (sooperset/mcp-atlassian) for VNPay self-hosted
-# Jira & Confluence (Data Center). LOCAL USE ONLY — stdio transport.
+# Local dev stack mirroring the Azure Container Apps deployment:
 #
-# This is NOT a long-running service. Claude Code launches the container on
-# demand (one per session) and talks to it over stdin/stdout. There is no port
-# and no network listener — nothing is exposed.
+#   auth-proxy (GitHub OAuth gateway, our code)  --> mcp-atlassian (community image)
+#        :8000 published to your host                 :9000 internal only
 #
-# Read-only is enforced in TWO layers via .env:
+# In Azure these two run as two containers in ONE Container App and talk over
+# localhost; locally they talk over the compose network by service name.
+#
+# READ-ONLY is enforced on mcp-atlassian via .env, exactly as before:
 #   1. READ_ONLY_MODE=true   -> disables every write operation
 #   2. ENABLED_TOOLS=<reads> -> allowlist; only read tools are even loaded
 #
-# Run/register (see CLAUDE.md):
-#   claude mcp add vnpay-atlassian -- \
-#     docker compose -f /Users/huy/Documents/proj/linhmi/docker-compose.yml run --rm -T atlassian-mcp
+# Run locally:
+#   cp .env.example .env   # fill in PATs; for local dev set AUTH_DISABLED=true
+#   docker compose up --build
+#   curl -s localhost:8000/mcp   # streamable-http endpoint via the proxy
 #
 services:
-  atlassian-mcp:
+  mcp-atlassian:
     # Pin to a specific release for supply-chain safety instead of floating :latest.
     # See https://github.com/sooperset/mcp-atlassian/releases and set MCP_ATLASSIAN_TAG in .env.
     image: ghcr.io/sooperset/mcp-atlassian:${MCP_ATLASSIAN_TAG:-latest}
 
+    # Run the community image as a streamable-http server on an INTERNAL port.
+    # No host port is published: only the auth-proxy may reach it.
+    command:
+      - --transport
+      - streamable-http
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "9000"
+
     # Credentials + read-only config all come from .env (never hard-code secrets here).
     env_file:
       - .env
-
-    # No `command:` -> the image defaults to stdio transport. No ports, no
-    # restart policy: the process lives only for the duration of an MCP session.
-    stdin_open: true   # keep STDIN open so the JSON-RPC stream works
-    tty: false         # MCP stdio is not a terminal
+    expose:
+      - "9000"
 
     # Hardening: drop privileges; downloads (if used) go to a writable tmpfs.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  auth-proxy:
+    # Our thin GitHub-OAuth gateway (auth-proxy/). Build locally; in Azure this
+    # image is built and pushed to ACR (see docs/azure-deployment.md).
+    build: ./auth-proxy
+    env_file:
+      - .env
+    environment:
+      # Reach mcp-atlassian by its compose service name locally (localhost in Azure).
+      BACKEND_MCP_URL: http://mcp-atlassian:9000/mcp
+      PROXY_HOST: "0.0.0.0"
+      PROXY_PORT: "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mcp-atlassian
+
     security_opt:
       - no-new-privileges:true
     cap_drop:
