@@ -1,41 +1,108 @@
-## Hướng dẫn dùng Claude Desktop để tra cứu JIRA và Confluence
+# VNPay Atlassian MCP — read-only JIRA and Confluence for Claude
 
-Tài liệu này giúp em kết nối Claude Desktop với hệ thống JIRA và Confluence của VNPay, để hỏi Claude về tiến độ công việc, phân công, và nội dung trang wiki. Claude chỉ xem thông tin, không chỉnh sửa gì cả.
+This connects Claude to VNPay's self-hosted JIRA and Confluence so you can ask about project timelines, task assignments, sprints, estimates, and wiki pages in plain language. Claude only reads — it can never create, edit, or delete anything on JIRA or Confluence.
 
-## Chuẩn bị
+There are two guides below. Most people only need the first one.
 
-- Đã cài Claude Desktop trên máy.
-- Có tài khoản GitHub và đã được cấp quyền truy cập. Nếu chưa, hãy nhắn cho người quản trị kèm tên đăng nhập GitHub của bạn.
+- [For everyone: connect Claude Desktop](#for-everyone-connect-claude-desktop) — use the shared server an admin already deployed. No setup, no command line.
+- [For engineers: deploy your own server](#for-engineers-deploy-your-own-server) — stand up the whole thing on your own Azure account.
 
-## Các bước kết nối
+---
 
-1. Mở Claude, vào Customize (Tùy chỉnh) > Connectors (Trình kết nối).
-2. Bấm dấu **+**, rồi chọn **Add custom connector** (Thêm trình kết nối tùy chỉnh).
-3. Điền tên `VNPay Atlassian` vào ô Name (Tên), rồi dán địa chỉ này vào ô URL (không cần điền gì ở phần Advanced settings):
+## For everyone: connect Claude Desktop
+
+### What you need
+
+- Claude Desktop installed on your computer.
+- A GitHub account that has been granted access. If you are not sure you have access, message the admin with your GitHub username.
+
+### Connect it (one time)
+
+1. Open Claude Desktop, go to Customize (or Settings) > Connectors.
+2. Click the **+** and choose **Add custom connector**.
+3. Set the Name to `VNPay Atlassian`, and paste this into the URL field (leave Advanced settings empty):
 
    ```
    https://vnpay-atlassian-mcp.politeisland-ad6a6562.southeastasia.azurecontainerapps.io/mcp
    ```
 
-4. Ở mục phê duyệt **Need approvals** (Cần phê duyệt), đổi sang **Always allow** (Luôn cho phép) để Claude không phải hỏi xác nhận mỗi lần tra cứu.
-5. Bấm **Add** (Thêm). Một cửa sổ trình duyệt sẽ mở ra để bạn đăng nhập GitHub; bấm đồng ý cấp quyền.
-6. Xong. Trình kết nối đã được thêm và bạn không phải đăng nhập lại ở những lần sau.
+4. Under **Need approvals**, switch to **Always allow** so Claude does not ask for confirmation on every lookup.
+5. Click **Add**. A browser window opens for you to sign in to GitHub — approve the access request.
+6. Done. The connector stays added and you will not have to sign in again next time.
 
-## Bật trình kết nối trong cuộc trò chuyện
+### Turn it on in a chat
 
-Trong mỗi cuộc trò chuyện, bấm dấu **+** ở góc dưới bên trái khung chat, chọn **Connectors**, rồi bật `VNPay Atlassian`. Sau đó bạn có thể hỏi Claude về JIRA và Confluence.
+In each conversation, click the **+** at the bottom-left of the chat box, choose **Connectors**, and switch on `VNPay Atlassian`. Now you can ask Claude about JIRA and Confluence.
 
-## Bạn có thể hỏi gì
+### What you can ask
 
-- "Liệt kê các công việc đang làm dở (In Progress)."
-- "Tổng hợp tiến độ và người phụ trách của dự án VNPSHOPNEW."
-- "Các công việc ưu tiên cao trong dự án VNPVNCALL hiện đang làm là gì?"
-- "Trang Confluence này có thay đổi gì so với phiên bản trước?"
+- "List the tasks that are currently In Progress."
+- "Summarize the progress and owners for the VNPSHOPNEW project."
+- "What are the high-priority tasks in progress in the VNPVNCALL project?"
+- "What changed on this Confluence page compared to the previous version?"
 
-## Nếu gặp trục trặc
+### If something goes wrong
 
-- Đăng nhập xong nhưng không tra cứu được: tài khoản GitHub của bạn chưa được cấp quyền. Hãy nhắn người quản trị kèm tên đăng nhập GitHub của bạn.
-- Không kết nối được: thử lại sau ít phút; nếu vẫn không được, báo người quản trị.
-- Muốn đổi sang tài khoản GitHub khác: vào Customize > Connectors, xóa trình kết nối rồi thêm lại theo các bước trên.
-- Không thấy trình kết nối để bật trong cuộc trò chuyện: kiểm tra lại đã thêm ở Customize > Connectors chưa. Nếu công ty dùng gói Team/Enterprise, người quản trị (Owner) cần thêm trình kết nối ở Organization settings > Connectors trước, sau đó bạn vào Customize > Connectors và bấm Connect để đăng nhập.
-- Bất cứ lúc nào cần giúp, cứ nhắn anh. Anh luôn ở đây.
+- Signed in but cannot look anything up: your GitHub account has not been granted access yet. Message the admin with your GitHub username.
+- Cannot connect at all: the server may be waking from idle (see the note below) — try again in a few seconds. If it still fails, tell the admin.
+- Want to switch to a different GitHub account: go to Customize > Connectors, remove the connector, and add it again with the steps above.
+- The connector is not available to turn on in a chat: re-check that you added it under Customize > Connectors. On a Team/Enterprise plan, an Owner may first need to add the connector under Organization settings > Connectors, after which you go to Customize > Connectors and click Connect to sign in.
+
+### Note on the first request being slow
+
+To keep cost at zero, the server sleeps when nobody is using it and wakes on the next request. The first lookup after a quiet period can take a few extra seconds while it wakes up; after that it is fast. This is expected and not a fault.
+
+---
+
+## For engineers: deploy your own server
+
+This repo deploys the community [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian) image unchanged, locked into read-only mode, onto Azure Container Apps. A thin GitHub-OAuth gateway (`auth-proxy/`) is the only public surface; it terminates GitHub OAuth and forwards the session to `mcp-atlassian` over localhost. Read-only is enforced by two independent layers — `READ_ONLY_MODE=true` and an `ENABLED_TOOLS` allowlist that loads only read tools.
+
+```
+Claude Desktop / Claude Code
+   │  HTTPS + GitHub OAuth
+   ▼
+Azure Container App (one pod, two containers)
+   ├─ auth-proxy      external HTTPS :443 -> :8000   (GitHub OAuth gateway, our code)
+   └─ mcp-atlassian   localhost :9000                (community image, unchanged, read-only)
+   │  HTTPS + read-only service-account PAT
+   ▼
+VNPay JIRA / Confluence (Data Center)
+```
+
+### Prerequisites
+
+- Azure CLI logged in (`az login`, then `az account set --subscription "<sub>"`).
+- Docker, plus a way to push to ghcr.io: a `GHCR_TOKEN` (GitHub PAT with `write:packages`) in `.env`, or the `gh` CLI logged in.
+- A dedicated read-only JIRA/Confluence service-account Personal Access Token (Data Center 8.14+). Read-only is enforced by the server, not the token, so use a least-privilege account.
+
+### Deploy
+
+```bash
+cp .env.example .env        # fill in JIRA_URL, CONFLUENCE_URL, the two PATs, GHCR_USER
+
+# First deploy: GitHub OAuth creds are still placeholders, so it comes up with auth
+# disabled and prints the public FQDN + the exact OAuth callback URL.
+bash scripts/deploy-azure.sh
+
+# Then create a GitHub OAuth App (callback = https://<fqdn>/auth/callback), make the
+# pushed ghcr.io package Public so Azure can pull it anonymously, and put the real
+# GITHUB_OAUTH_CLIENT_ID / GITHUB_OAUTH_CLIENT_SECRET in .env.
+bash scripts/deploy-azure.sh   # re-deploy, now with GitHub OAuth enabled
+
+bash scripts/destroy-azure.sh  # tear everything down (deletes claude-mcp-rg)
+```
+
+Full step-by-step, including the OAuth app setup and verification commands, is in [wiki/azure-deployment.md](wiki/azure-deployment.md). Client setup for Claude Desktop and Claude Code is in [wiki/atlassian-remote.md](wiki/atlassian-remote.md):
+
+```bash
+claude mcp add --transport http vnpay-atlassian https://<your-fqdn>/mcp
+```
+
+### Note on free-tier cost and cold starts
+
+The deployment is tuned to stay within Azure's free grant: no Container Registry (the proxy image is pulled anonymously from public ghcr.io), no Key Vault (secrets are native Container Apps secrets), and `minReplicas=0` so there is no idle compute cost. The trade-off is an HTTP cold start of a few seconds on the first request after the app scales to zero — MCP clients retry through it. This does not force users to re-authenticate. The cost reasoning and the exact knobs are documented in [wiki/azure-deployment.md](wiki/azure-deployment.md).
+
+### Read-only by design
+
+This deployment must never create, update, or delete anything on JIRA or Confluence, even on request. The image ships write tools; both `READ_ONLY_MODE=true` and the `ENABLED_TOOLS` read allowlist neutralize them, and the auth-proxy is auth-only with no path to Atlassian. See [.claude/CLAUDE.md](.claude/CLAUDE.md) for the full contract before changing anything.
