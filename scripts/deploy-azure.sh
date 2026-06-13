@@ -110,7 +110,7 @@ EOF
 else
   cat <<EOF
 
-Connect a client (see docs/atlassian-remote.md):
+Connect a client (see wiki/atlassian-remote.md):
   Claude Code:    claude mcp add --transport http vnpay-atlassian $MCP_URL
   Claude Desktop: add a custom connector pointing at $MCP_URL
 Confirm the GitHub OAuth app's callback URL is exactly: $CALLBACK

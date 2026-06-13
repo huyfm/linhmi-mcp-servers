@@ -38,15 +38,14 @@ docker-compose.yml   # LOCAL dev stack: mcp-atlassian (streamable-http) + auth-p
 .gitignore           # Ignores .env and Python/build cruft
 
 pyproject.toml       # uv project: pytest dev-dependency + pytest config (pythonpath/testpaths -> tests)
-docs/
+wiki/
   azure-deployment.md      # Bicep deploy guide (scripts/deploy-azure.sh) into claude-mcp-rg
   atlassian-remote.md      # Connect Claude Desktop (custom connector) + Claude Code to the remote endpoint
-  google-chat-mcp.md       # Separate, unrelated server: the remote Google Chat MCP (not read-only Atlassian)
 scripts/
   deploy-azure.sh                 # Build/push the proxy image + run the Bicep deployment
   destroy-azure.sh                # Delete claude-mcp-rg (one-command teardown)
   setup-jira-mcp.sh               # Register the remote HTTP endpoint with Claude Code
-  setup-google-chat-desktop.sh    # Run in WSL2: installs the remote Google Chat MCP into Windows Claude Desktop via mcp-remote
+  smoke_test.py                   # Post-deploy health check: fails loudly if the live server isn't up + read-only + authenticated
 tests/
   mcp_client.py      # Reusable read-only MCP streamable-http client used by the tests (on pytest pythonpath)
   conftest.py        # pytest fixtures: connected `mcp` client, project_key, page_id (+ skips)
@@ -72,8 +71,8 @@ VNPay JIRA / Confluence (Data Center)
 - **Endpoint auth:** GitHub OAuth, terminated by the `auth-proxy` (FastMCP `GitHubProvider`), which presents a DCR/PKCE-compliant OAuth surface so Claude Desktop's native custom connector and `mcp-remote` both work. `mcp-atlassian`'s own `Authorization: Bearer` handling is for Atlassian tokens, so the gateway must NOT reuse that header — the proxy forwards without it and `mcp-atlassian` falls back to its env service-account PAT.
 - **Atlassian auth:** **Personal Access Token** (`JIRA_PERSONAL_TOKEN` / `CONFLUENCE_PERSONAL_TOKEN`), the standard for Jira/Confluence Data Center 8.14+. `JIRA_SSL_VERIFY` / `CONFLUENCE_SSL_VERIFY` handle internal CA certs.
 - The `mcp-atlassian` image tag is pinned via `MCP_ATLASSIAN_TAG` (and `fastmcp` is pinned in `auth-proxy/requirements.txt`) for supply-chain safety — prefer specific releases over `latest`.
-- **Cost/secrets posture (lowest cost):** the `auth-proxy` image lives on **public ghcr.io** (pulled anonymously — no ACR), and the three secrets (both PATs + GitHub client secret) are **native Container Apps secrets** (no Key Vault, no managed identity). Container App is two 0.25-vCPU/0.5-GiB containers, `minReplicas=maxReplicas=1`.
-- **Provisioning:** Bicep in `infra/`, deployed by `scripts/deploy-azure.sh` into `claude-mcp-rg` — see `docs/azure-deployment.md`. (No azd/Terraform.)
+- **Cost/secrets posture (lowest cost):** the `auth-proxy` image lives on **public ghcr.io** (pulled anonymously — no ACR), and the three secrets (both PATs + GitHub client secret) are **native Container Apps secrets** (no Key Vault, no managed identity). Container App is two 0.25-vCPU/0.5-GiB containers, `minReplicas=0` (scale-to-zero, no idle cost — stays within the Consumption free grant; trade-off is an HTTP cold start after idle) and `maxReplicas=1` (preserves the single-pod shared-localhost topology).
+- **Provisioning:** Bicep in `infra/`, deployed by `scripts/deploy-azure.sh` into `claude-mcp-rg` — see `wiki/azure-deployment.md`. (No azd/Terraform.)
 
 ## Commands
 
@@ -91,7 +90,7 @@ bash scripts/destroy-azure.sh   # tear it all down (deletes claude-mcp-rg)
 
 # Register the remote endpoint with Claude Code:
 claude mcp add --transport http vnpay-atlassian https://<your-container-app-fqdn>/mcp
-#   (Claude Desktop connects via a native custom connector — see docs/atlassian-remote.md)
+#   (Claude Desktop connects via a native custom connector — see wiki/atlassian-remote.md)
 ```
 
 ## Read-only tools available (for analysis)

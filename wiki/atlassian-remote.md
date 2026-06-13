@@ -1,6 +1,6 @@
 # Connecting to the remote read-only Atlassian MCP server
 
-The Atlassian MCP server now runs in Azure as a remote streamable-http endpoint behind GitHub OAuth (see `docs/azure-deployment.md` for how it is deployed). This documents how to connect clients to it. The endpoint is:
+The Atlassian MCP server now runs in Azure as a remote streamable-http endpoint behind GitHub OAuth (see `wiki/azure-deployment.md` for how it is deployed). This documents how to connect clients to it. The endpoint is:
 
 ```
 https://<your-container-app-fqdn>/mcp
@@ -21,7 +21,7 @@ If your GitHub account is not on the server's `ALLOWED_GITHUB_USERS` list (when 
 
 ### Fallback: the mcp-remote bridge
 
-Older Claude Desktop builds that cannot dial a remote MCP URL can bridge through `mcp-remote` (the same approach used for the Google Chat server in `docs/google-chat-mcp.md`). This needs Node.js on Windows so `npx` is available. Add to `%APPDATA%\Claude\claude_desktop_config.json`:
+Older Claude Desktop builds that cannot dial a remote MCP URL can bridge through `mcp-remote`. This needs Node.js on Windows so `npx` is available. Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 
 ```json
 {

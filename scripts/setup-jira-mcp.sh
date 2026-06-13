@@ -5,7 +5,7 @@
 # The server is now a remote HTTP endpoint, not a local Docker/stdio container,
 # so registration is a one-liner: Claude Code dials the URL and runs the GitHub
 # OAuth flow in your browser on first use. For Claude Desktop, use a native
-# custom connector instead -- see docs/atlassian-remote.md.
+# custom connector instead -- see wiki/atlassian-remote.md.
 #
 # Usage:
 #   bash scripts/setup-jira-mcp.sh https://<your-container-app-fqdn>/mcp
@@ -62,4 +62,4 @@ echo
 echo "Next steps:"
 echo "  1. In Claude Code run /mcp (or: claude mcp get $SERVER_NAME) to confirm it is listed."
 echo "  2. On first use, a browser opens for GitHub sign-in; authorize the OAuth app."
-echo "  3. The read-only Jira/Confluence tools then appear. (Claude Desktop: see docs/atlassian-remote.md.)"
+echo "  3. The read-only Jira/Confluence tools then appear. (Claude Desktop: see wiki/atlassian-remote.md.)"

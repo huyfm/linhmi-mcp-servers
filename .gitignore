@@ -1,6 +1,5 @@
 # Secrets — never commit real credentials
 .env
-*google-chat-oauth*.json
 
 # Python
 __pycache__/

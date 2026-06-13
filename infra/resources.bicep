@@ -3,7 +3,10 @@
 //
 // Lowest-cost posture: no ACR (auth-proxy comes from public ghcr.io, pulled
 // anonymously), no Key Vault / managed identity (secrets are native Container
-// Apps secrets), Consumption environment, smallest valid container sizes.
+// Apps secrets), Consumption environment, smallest valid container sizes, and
+// scale-to-zero (minReplicas=0) so there is no idle compute cost — usage stays
+// within the Consumption free grant. Trade-off: an HTTP cold start on the first
+// request after the app has idled down.
 
 @description('Azure region for all resources.')
 param location string
@@ -119,9 +122,24 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       ]
     }
     template: {
+      // Scale-to-zero: idle the app down to 0 replicas so there is no standing
+      // compute cost, keeping usage within the Consumption free grant. An HTTP
+      // request cold-starts a single replica (both containers); after the
+      // inactivity window it scales back to 0. maxReplicas=1 keeps the
+      // single-pod, shared-localhost topology (auth-proxy -> mcp-atlassian).
       scale: {
-        minReplicas: 1
+        minReplicas: 0
         maxReplicas: 1
+        rules: [
+          {
+            name: 'http-scale'
+            http: {
+              metadata: {
+                concurrentRequests: '20'
+              }
+            }
+          }
+        ]
       }
       containers: [
         {

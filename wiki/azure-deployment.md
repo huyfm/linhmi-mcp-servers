@@ -20,8 +20,12 @@ Internet ──HTTPS──> Container App ingress :443
 
 - No Azure Container Registry: the `auth-proxy` image is built locally and pushed to a public ghcr.io repo, pulled anonymously. Saves the ~$5/mo ACR Basic and the need for a pull identity.
 - No Key Vault and no managed identity: the three secrets (Jira PAT, Confluence PAT, GitHub client secret) are stored as native Container Apps secrets (encrypted at rest, $0, fewest moving parts). Key Vault is a reasonable hardening upgrade later, but it is not the lowest-cost or simplest option, so it is intentionally not used here.
-- Container Apps Consumption environment (no standing charge) with both containers at the smallest valid size, 0.25 vCPU / 0.5 GiB each (0.5 / 1.0 total). `minReplicas=1` keeps one replica always on so GitHub OAuth sessions stay stable; that is the main steady cost (roughly low-tens of dollars a month). Delete the resource group when idle to drop it to zero.
+- Container Apps Consumption environment (no standing charge) with both containers at the smallest valid size, 0.25 vCPU / 0.5 GiB each (0.5 / 1.0 total). `minReplicas=0` (scale-to-zero) means there is no standing compute cost: when idle the app drops to zero replicas and usage stays within the Consumption monthly free grant. The first request after an idle period pays an HTTP cold start (the pod and both containers spin up), which adds a few seconds of latency that MCP clients retry through. `maxReplicas=1` keeps the single-pod shared-localhost topology so the proxy always reaches `mcp-atlassian` on `localhost`.
 - A Log Analytics workspace is created for logs; ingestion at this volume stays within the monthly free allowance.
+
+### Cold start does not force a re-login
+
+A scale-to-zero cold start does **not** make users re-authenticate with GitHub. The `auth-proxy` validates each incoming bearer statelessly: `OAuthProxy.load_access_token` delegates to `GitHubTokenVerifier.verify_token`, which calls `https://api.github.com/user` live on every request — it does not depend on the proxy's in-memory token/client maps. Because the deployment uses a GitHub **OAuth App** (whose user access tokens don't expire by default), the client's cached token keeps validating across cold starts, so a recycled replica just means boot latency on the first request, not a fresh SSO. The only narrow case that re-prompts is a replica recycling mid-login (in the brief window between `/authorize` and the `/token` callback), since that in-flight transaction state is in memory; established sessions are unaffected.
 
 ## Files
 
@@ -75,7 +79,7 @@ With real creds present, the script deploys with auth enabled. Bicep is declarat
 1. Revision is healthy: `az containerapp revision list -g claude-mcp-rg -n vnpay-atlassian-mcp -o table` shows the latest revision Running and Healthy.
 2. OAuth metadata is served: `curl -s https://<fqdn>/.well-known/oauth-protected-resource` returns JSON, and `https://<fqdn>/.well-known/oauth-authorization-server` returns the GitHub-federated metadata.
 3. Logs look right: `az containerapp logs show -g claude-mcp-rg -n vnpay-atlassian-mcp --container mcp-atlassian --tail 50` shows streamable-http serving with `READ_ONLY_MODE=true`; `--container auth-proxy` shows `auth=GitHub OAuth`.
-4. Connect a client (see `docs/atlassian-remote.md`): Claude Desktop via a native custom connector at `https://<fqdn>/mcp`, or Claude Code with `claude mcp add --transport http vnpay-atlassian https://<fqdn>/mcp`. Confirm `tools/list` shows only the read-only allowlist.
+4. Connect a client (see `wiki/atlassian-remote.md`): Claude Desktop via a native custom connector at `https://<fqdn>/mcp`, or Claude Code with `claude mcp add --transport http vnpay-atlassian https://<fqdn>/mcp`. Confirm `tools/list` shows only the read-only allowlist.
 
 ## Updating
 

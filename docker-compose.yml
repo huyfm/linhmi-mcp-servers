@@ -48,7 +48,7 @@ services:
 
   auth-proxy:
     # Our thin GitHub-OAuth gateway (auth-proxy/). Build locally; in Azure this
-    # image is built and pushed to ACR (see docs/azure-deployment.md).
+    # image is built and pushed to ACR (see wiki/azure-deployment.md).
     build: ./auth-proxy
     env_file:
       - .env
